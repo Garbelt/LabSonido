@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Laboratorio del Sonido</title>
+
+<style>
+
+body{
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 8px;
+
+    background: #f5f5f5;
+
+    min-height: 100vh;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+h1{
+    margin: 5px 0 10px;
+    font-size: 1.4rem;
+}
+
+h3{
+    margin: 5px 0;
+    font-size: 1rem;
+}
+
+input{
+    width: 90px;
+    text-align: center;
+    font-size: 16px;
+}
+
+button{
+    padding: 6px 10px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+#container{
+    display:grid;
+
+    grid-template-columns: 2fr 1fr;
+    grid-template-rows: auto 1fr;
+
+    gap:8px;
+
+    width:98vw;
+    max-width:1200px;
+
+    margin:auto;
+}
+
+#topbar{
+    grid-column:1;
+    grid-row:1;
+
+    border:1px solid #999;
+    border-radius:8px;
+
+    padding:8px;
+
+    background:white;
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:10px;
+
+    flex-wrap:wrap;
+}
+
+#wavePanel{
+    grid-column:1;
+    grid-row:2;
+
+    border:1px solid #999;
+    border-radius:8px;
+
+    padding:6px;
+
+    background:white;
+}
+
+#chladniPanel{
+    grid-column:2;
+    grid-row:1 / span 2;
+
+    border:1px solid #999;
+    border-radius:8px;
+
+    padding:6px;
+
+    background:white;
+
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+}
+
+#waveCanvas{
+    background:white;
+    display:block;
+    margin:auto;
+
+    width:100%;
+    height:auto;
+    max-height:40vh;
+}
+
+#chladniCanvas{
+    background:black;
+    display:block;
+    margin:auto;
+
+    width:100%;
+    max-width:300px;
+    height:auto;
+    max-height:40vh;
+}
+
+canvas{
+    max-width:100%;
+}
+
+#rotateMessage{
+    display:none;
+}
+
+@media (orientation: portrait){
+
+    #rotateMessage{
+        display:flex;
+        position:fixed;
+        inset:0;
+
+        background:white;
+
+        z-index:9999;
+
+        align-items:center;
+        justify-content:center;
+
+        text-align:center;
+
+        font-size:24px;
+        padding:20px;
+    }
+
+    h1,
+    #container{
+        display:none;
+    }
+}
+
+/* ==========================
+   CELULARES EN HORIZONTAL
+========================== */
+
+@media (max-height: 500px) and (orientation: landscape){
+
+    body{
+        padding:4px;
+    }
+
+    h1{
+        font-size:1rem;
+        margin:0 0 4px;
+    }
+
+    h3{
+        font-size:0.85rem;
+        margin:2px 0;
+    }
+
+    #container{
+        gap:4px;
+    }
+
+    #topbar{
+        padding:4px;
+        font-size:14px;
+    }
+
+    input{
+        width:70px;
+        font-size:14px;
+    }
+
+    button{
+        padding:4px 8px;
+        font-size:12px;
+    }
+
+    #wavePanel,
+    #chladniPanel{
+        padding:4px;
+    }
+
+    #waveCanvas{
+        max-height:180px;
+    }
+
+    #chladniCanvas{
+        max-width:180px;
+        max-height:180px;
+    }
+}
+
+</style>
+
+</head>
+<body>
+
+<div id="rotateMessage">
+    🔄 GIRÁ EL DISPOSITIVO PARA USARLO EN MODO HORIZONTAL
+</div>
+
+<h1>🔊 LABORATORIO DEL SONIDO</h1>
+
+<div id="container">
+
+    <div id="topbar">
+
+        Frecuencia:
+
+        <input
+            type="number"
+            id="freq"
+            value="440"
+            min="20"
+            max="2000">
+
+        Hz
+
+        <button id="soundBtn">
+            ▶ Reproducir
+        </button>
+
+    </div>
+
+    <div id="wavePanel">
+
+        <h3>Onda</h3>
+
+        <canvas
+            id="waveCanvas"
+            width="700"
+            height="400">
+        </canvas>
+
+    </div>
+
+    <div id="chladniPanel">
+
+        <h3>Figura de Chladni</h3>
+
+        <canvas
+            id="chladniCanvas"
+            width="350"
+            height="350">
+        </canvas>
+
+    </div>
+
+</div>
+
+<script>
+
+/* AUDIO */
+
+let audioContext;
+let oscillator;
+let playing=false;
+
+const freqInput =
+    document.getElementById("freq");
+
+const soundBtn =
+    document.getElementById("soundBtn");
+
+soundBtn.addEventListener(
+    "click",
+    toggleSound
+);
+
+function toggleSound(){
+
+    if(!playing){
+
+        audioContext =
+            new (
+                window.AudioContext ||
+                window.webkitAudioContext
+            )();
+
+        oscillator =
+            audioContext.createOscillator();
+
+        oscillator.type="sine";
+
+        oscillator.frequency.value =
+            getFreq();
+
+        oscillator.connect(
+            audioContext.destination
+        );
+
+        oscillator.start();
+
+        playing=true;
+
+        soundBtn.textContent=
+            "■ Detener";
+
+    }else{
+
+        oscillator.stop();
+        oscillator.disconnect();
+
+        playing=false;
+
+        soundBtn.textContent=
+            "▶ Reproducir";
+    }
+}
+
+function getFreq(){
+    return parseFloat(freqInput.value);
+}
+
+/* ONDA */
+
+const waveCanvas =
+    document.getElementById("waveCanvas");
+
+const waveCtx =
+    waveCanvas.getContext("2d");
+
+function drawWave(){
+
+    const freq = getFreq();
+
+    waveCtx.clearRect(
+        0,0,
+        waveCanvas.width,
+        waveCanvas.height
+    );
+
+    waveCtx.beginPath();
+
+    const cycles =
+        freq/100;
+
+    for(let x=0;
+        x<waveCanvas.width;
+        x++){
+
+        const angle =
+            x/waveCanvas.width
+            * cycles
+            * Math.PI*2;
+
+        const y =
+            waveCanvas.height/2
+            -
+            80*Math.sin(angle);
+
+        if(x===0){
+            waveCtx.moveTo(x,y);
+        }else{
+            waveCtx.lineTo(x,y);
+        }
+    }
+
+    waveCtx.lineWidth=2;
+    waveCtx.stroke();
+
+    waveCtx.fillText(
+        freq+" Hz",
+        15,
+        25
+    );
+}
+
+/* CHLADNI */
+
+const cCanvas =
+    document.getElementById(
+        "chladniCanvas"
+    );
+
+const cCtx =
+    cCanvas.getContext("2d");
+
+function drawChladni(){
+
+    const freq = getFreq();
+
+    const img =
+        cCtx.createImageData(
+            cCanvas.width,
+            cCanvas.height
+        );
+
+    const data = img.data;
+
+    const n =
+        Math.max(
+            1,
+            Math.floor(freq/80)
+        );
+
+    const m =
+        Math.max(
+            1,
+            Math.floor(freq/120)
+        );
+
+    let p=0;
+
+    for(let y=0;
+        y<cCanvas.height;
+        y++){
+
+        for(let x=0;
+            x<cCanvas.width;
+            x++){
+
+            const xx =
+                x/cCanvas.width
+                * Math.PI;
+
+            const yy =
+                y/cCanvas.height
+                * Math.PI;
+
+            const z =
+                Math.sin(n*xx)
+                *
+                Math.sin(m*yy)
+                +
+                Math.sin(m*xx)
+                *
+                Math.sin(n*yy);
+
+            const color =
+                Math.abs(z)<0.05
+                ?255
+                :0;
+
+            data[p++] = color;
+            data[p++] = color;
+            data[p++] = color;
+            data[p++] = 255;
+        }
+    }
+
+    cCtx.putImageData(
+        img,
+        0,
+        0
+    );
+}
+
+/* ACTUALIZACION */
+
+function updateAll(){
+
+    drawWave();
+
+    drawChladni();
+
+    if(
+        playing &&
+        oscillator
+    ){
+        oscillator.frequency.value =
+            getFreq();
+    }
+}
+
+freqInput.addEventListener(
+    "input",
+    updateAll
+);
+
+updateAll();
+
+</script>
+
+</body>
+</html>
